@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/grocery-store.jpg') }}">
+    <title>Shop - SSK & Co</title>
+    <style>
+        :root {
+            --bg-main: #121212; --bg-card: #1e1e1e;
+            --text-main: #f3f4f6; --text-muted: #9ca3af;
+            --accent: #10b981; --accent-hover: #059669; --border: #333;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 50px; }
+        
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        nav h2 { color: var(--accent); cursor: pointer; }
+        .nav-btns button { background: var(--accent); color: #000; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px; }
+        
+        /* Carousel */
+        .carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; height: 250px; background: #000; margin-bottom: 30px; }
+        .carousel img { min-width: 100%; height: 100%; object-fit: cover; scroll-snap-align: center; opacity: 0.8; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        
+        /* Categories View */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .cat-card { background: var(--bg-card); padding: 30px; text-align: center; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: 0.3s; }
+        .cat-card:hover { border-color: var(--accent); transform: translateY(-5px); }
+        .cat-card h3 { color: var(--accent); font-size: 1.5rem; }
+
+        /* Products View */
+        .prod-card { background: var(--bg-card); padding: 15px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; }
+        .prod-img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; cursor: pointer; margin-bottom: 15px; }
+        .prod-info h4 { cursor: pointer; color: var(--text-main); margin-bottom: 5px; }
+        .prod-info h4:hover { color: var(--accent); }
+        .price-display { color: var(--accent); font-size: 1.2rem; font-weight: bold; margin: 10px 0; }
+        
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; }
+        .controls select, .controls input { flex: 1; background: var(--bg-main); color: white; border: 1px solid var(--border); padding: 8px; border-radius: 6px; }
+        .add-btn { width: 100%; padding: 10px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .add-btn:hover { background: var(--accent-hover); }
+        .back-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .back-btn:hover { color: white; }
+
+        /* Product Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-content { background: var(--bg-card); width: 100%; max-width: 800px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        @media(min-width: 768px) { .modal-content { flex-direction: row; height: 500px; } }
+        .modal-close { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 16px; z-index: 10; }
+        .modal-img { flex: 1; min-height: 250px; background-size: cover; background-position: center; }
+        .modal-details { flex: 1.5; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
+        .modal-desc { color: var(--text-muted); margin: 15px 0; line-height: 1.6; white-space: pre-wrap; font-size: 0.95rem; }
+
+        /* Toast Alert */
+        .toast { visibility: hidden; min-width: 250px; background-color: var(--accent); color: #000; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 1001; bottom: 30px; left: 50%; transform: translateX(-50%); font-weight: bold; opacity: 0; transition: opacity 0.3s; }
+        .toast.show { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2 onclick="window.location.href='/'">SSK & Co</h2>
+        <div class="nav-btns">
+            <span id="user-greeting" style="margin-right:15px; color:var(--text-muted)"></span>
+            <button onclick="window.location.href='/cart'">Go to Bag (<span id="cart-count">0</span>)</button>
+        </div>
+    </nav>
+
+    <div class="carousel" id="shop-carousel">
+        <img src="{{ settings['Carousel_Image_1'] }}" alt="Offer 1">
+        <img src="{{ settings['Carousel_Image_2'] }}" alt="Offer 2">
+    </div>
+
+    <!-- Search Bar -->
+    <div class="container" style="margin-bottom: 20px;">
+        <input type="text" id="search-input" placeholder="Search for products, categories, or keywords..." onkeyup="searchProducts()" style="width: 100%; padding: 15px; background: var(--bg-card); color: white; border: 1px solid var(--accent); border-radius: 8px; font-size: 1.1rem; outline: none; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+    </div>
+
+    <div class="container" id="category-view">
+        <div class="section-header">
+            <h2>Shop by Category</h2>
+        </div>
+        <div class="grid" id="category-grid">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <div class="container" id="product-view" style="display:none;">
+        <div class="section-header">
+            <h2 id="current-category-title">Products</h2>
+            <button class="back-btn" onclick="showCategories()">← Back to Categories</button>
+        </div>
+        <div class="grid" id="product-grid">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- Product Modal Dialog -->
+    <div id="prod-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <div class="modal-img" id="m-img"></div>
+            <div class="modal-details">
+                <p style="color:var(--accent); font-size:0.9rem" id="m-cat"></p>
+                <h2 id="m-name" style="margin-bottom:10px;"></h2>
+                <div class="price-display" style="font-size: 1.5rem;">₹<span id="m-price"></span></div>
+                <p class="modal-desc" id="m-desc"></p>
+                
+                <div style="margin-top:auto;">
+                    <div class="controls" style="margin-bottom: 20px;">
+                        <select id="m-weight-select" onchange="updateModalPrice()"></select>
+                        <input type="number" id="m-qty" value="1" min="1" onchange="updateModalPrice()">
+                    </div>
+                    <button class="add-btn" style="padding:15px; font-size:1.1rem;" onclick="addFromModal()">Add to Bag</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const allProducts = {{ products | tojson }};
+        let cart = JSON.parse(localStorage.getItem('sskc_cart')) || [];
+        let currentActiveProduct = null;
+        let currentCategory = null;
+
+        window.onload = () => {
+            const user = JSON.parse(localStorage.getItem('sskc_user'));
+            if(!user) { window.location.href = '/'; return; }
+            document.getElementById('user-greeting').innerText = `Hello, ${user.Full_Name}`;
+            updateCartCount();
+            renderCategories();
+            
+            let currentSlide = 0;
+            const carousel = document.getElementById('shop-carousel');
+            const slides = carousel.getElementsByTagName('img');
+            setInterval(() => {
+                if(slides.length > 0) {
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    carousel.scrollTo({ left: slides[currentSlide].offsetLeft, behavior: 'smooth' });
+                }
+            }, 5000);
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = 'toast show';
+            setTimeout(() => { t.className = t.className.replace('show', ''); }, 3000);
+        }
+
+        function updateCartCount() {
+            let totalQty = cart.reduce((sum, item) => sum + parseInt(item.qty), 0);
+            document.getElementById('cart-count').innerText = totalQty;
+        }
+
+        // --- Core Pricing Logic (Handles dynamic weight calculations) ---
+        function calculateDynamicPrice(basePrice, weightStr) {
+            basePrice = parseFloat(basePrice);
+            if(weightStr.includes('pcs') || weightStr.includes('pac')) return basePrice;
+            
+            let kg = 1;
+            if(weightStr.includes('kg')) kg = parseFloat(weightStr);
+            else if(weightStr.includes('g')) kg = parseFloat(weightStr) / 1000;
+
+            let price = basePrice * kg;
+            
+            // Apply markup for smaller packages
+            if (kg < 1) {
+                if (kg <= 0.25) price += 10;
+                else if (kg <= 0.5) price += 10;
+                if (kg < 0.1) price += 5; // Extra packaging cost for very small amounts
+            }
+            // Round to nearest 10 for clean UI numbers
+            return Math.ceil(price / 10) * 10; 
+        }
+
+        // --- Navigation ---
+        function renderCategories() {
+            const categories = [...new Set(allProducts.map(p => p.Category))];
+            const grid = document.getElementById('category-grid');
+            grid.innerHTML = categories.map(cat => `
+                <div class="cat-card" onclick="showProducts('${cat}')">
+                    <h3>${cat}</h3>
+                    <p style="color:var(--text-muted); margin-top:10px;">Explore Items →</p>
+                </div>
+            `).join('');
+        }
+
+        function renderProductGrid(products) {
+            const grid = document.getElementById('product-grid');
+            if(products.length === 0) {
+                grid.innerHTML = "<p style='color:var(--text-muted); grid-column: 1 / -1; text-align: center; font-size: 1.2rem; padding: 40px 0;'>No products found matching your search.</p>";
+                return;
+            }
+            
+            grid.innerHTML = products.map(p => {
+                const optionsHtml = p.Weight_Options.map(w => `<option value="${w}">${w}</option>`).join('');
+                return `
+                <div class="prod-card">
+                    <img src="${p.Image_URL}" class="prod-img" onclick="openModal('${p.Product_ID}')">
+                    <div class="prod-info">
+                        <h4 onclick="openModal('${p.Product_ID}')">${p.Name}</h4>
+                        <div class="price-display">₹<span id="price-${p.Product_ID}">0</span></div>
+                        <div class="controls">
+                            <select id="weight-${p.Product_ID}" onchange="updateCardPrice('${p.Product_ID}', ${p.Price})">
+                                ${optionsHtml}
+                            </select>
+                            <input type="number" id="qty-${p.Product_ID}" value="1" min="1" onchange="updateCardPrice('${p.Product_ID}', ${p.Price})">
+                        </div>
+                        <button class="add-btn" onclick="addFromCard('${p.Product_ID}', '${p.Name}', '${p.Image_URL}')">Add to Bag</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            // Initialize prices for all rendered cards
+            products.forEach(p => updateCardPrice(p.Product_ID, p.Price));
+        }
+
+        function showProducts(category) {
+            currentCategory = category;
+            document.getElementById('search-input').value = ''; // clear search when clicking category
+            document.getElementById('category-view').style.display = 'none';
+            document.getElementById('product-view').style.display = 'block';
+            document.getElementById('current-category-title').innerText = category;
+            
+            const products = allProducts.filter(p => p.Category === category);
+            renderProductGrid(products);
+        }
+
+        function showCategories() {
+            currentCategory = null;
+            document.getElementById('search-input').value = '';
+            document.getElementById('category-view').style.display = 'block';
+            document.getElementById('product-view').style.display = 'none';
+        }
+        
+        function searchProducts() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            
+            if (query.trim() === '') {
+                if (currentCategory) showProducts(currentCategory);
+                else showCategories();
+                return;
+            }
+
+            document.getElementById('category-view').style.display = 'none';
+            document.getElementById('product-view').style.display = 'block';
+            
+            if(currentCategory) {
+                document.getElementById('current-category-title').innerText = `Search in ${currentCategory}: "${query}"`;
+            } else {
+                document.getElementById('current-category-title').innerText = `Search Results: "${query}"`;
+            }
+            
+            let filtered = allProducts.filter(p => {
+                const matchesSearch = p.Name.toLowerCase().includes(query) || p.Description.toLowerCase().includes(query) || p.Category.toLowerCase().includes(query);
+                // If they are inside a specific category, only search within that category. Otherwise, search everything.
+                const matchesCategory = currentCategory ? p.Category === currentCategory : true;
+                return matchesSearch && matchesCategory;
+            });
+            
+            renderProductGrid(filtered);
+        }
+
+        // --- Card Logic ---
+        function updateCardPrice(id, basePrice) {
+            const weight = document.getElementById(`weight-${id}`).value;
+            const qty = parseInt(document.getElementById(`qty-${id}`).value) || 1;
+            const unitPrice = calculateDynamicPrice(basePrice, weight);
+            document.getElementById(`price-${id}`).innerText = unitPrice * qty;
+        }
+
+        function addFromCard(id, name, image) {
+            const weight = document.getElementById(`weight-${id}`).value;
+            const qty = parseInt(document.getElementById(`qty-${id}`).value) || 1;
+            const totalAmt = parseInt(document.getElementById(`price-${id}`).innerText);
+            
+            cart.push({ id, name, weight, qty, totalAmt, image });
+            localStorage.setItem('sskc_cart', JSON.stringify(cart));
+            updateCartCount();
+            showToast(`${qty}x ${name} added to Bag!`);
+        }
+
+        // --- Modal Logic ---
+        function openModal(id) {
+            currentActiveProduct = allProducts.find(p => p.Product_ID === id);
+            const p = currentActiveProduct;
+            
+            document.getElementById('m-img').style.backgroundImage = `url('${p.Image_URL}')`;
+            document.getElementById('m-cat').innerText = p.Category;
+            document.getElementById('m-name').innerText = p.Name;
+            document.getElementById('m-desc').innerText = p.Description;
+            document.getElementById('m-qty').value = 1;
+            
+            const wSelect = document.getElementById('m-weight-select');
+            wSelect.innerHTML = p.Weight_Options.map(w => `<option value="${w}">${w}</option>`).join('');
+            
+            updateModalPrice();
+            document.getElementById('prod-modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('prod-modal').style.display = 'none'; }
+        
+        function updateModalPrice() {
+            if(!currentActiveProduct) return;
+            const weight = document.getElementById('m-weight-select').value;
+            const qty = parseInt(document.getElementById('m-qty').value) || 1;
+            const unitPrice = calculateDynamicPrice(currentActiveProduct.Price, weight);
+            document.getElementById('m-price').innerText = unitPrice * qty;
+        }
+
+        function addFromModal() {
+            const weight = document.getElementById('m-weight-select').value;
+            const qty = parseInt(document.getElementById('m-qty').value) || 1;
+            const totalAmt = parseInt(document.getElementById('m-price').innerText);
+            
+            cart.push({ id: currentActiveProduct.Product_ID, name: currentActiveProduct.Name, weight, qty, totalAmt, image: currentActiveProduct.Image_URL });
+            localStorage.setItem('sskc_cart', JSON.stringify(cart));
+            updateCartCount();
+            showToast(`${qty}x ${currentActiveProduct.Name} added to Bag!`);
+            closeModal();
+        }
+    </script>
+</body>
+</html>

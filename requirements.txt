@@ -1,0 +1,3 @@
+Flask2.3.2
+gspread5.10.0
+oauth2client==4.1.3

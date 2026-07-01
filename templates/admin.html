@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/grocery-store.jpg') }}">
+    <title>Admin - SSK & Co</title>
+    <style>
+        :root {
+            --bg-main: #121212; --bg-card: #1e1e1e;
+            --text-main: #f3f4f6; --text-muted: #9ca3af;
+            --accent: #10b981; --border: #333;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); }
+        
+        nav { padding: 20px 5%; background: var(--bg-card); border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+        nav a { color: var(--accent); text-decoration:none; border:1px solid var(--accent); padding:8px 15px; border-radius:5px;}
+        
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        
+        .login-box { max-width: 400px; margin: 100px auto; background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .login-box input { width: 100%; padding: 12px; margin: 15px 0; background: var(--bg-main); border: 1px solid var(--border); color: white; border-radius: 6px; }
+        .login-box button { width: 100%; padding: 12px; background: var(--accent); color: #000; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--bg-card); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background-color: rgba(255,255,255,0.05); color: var(--accent); font-weight: bold; }
+        tr:hover { background-color: rgba(255,255,255,0.02); }
+        
+        select { background: var(--bg-main); color: white; border: 1px solid var(--border); padding: 8px; border-radius: 4px; outline: none; }
+        .wa-btn { background: #25D366; color: #000; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; font-size:0.9rem; display:inline-block; margin-top:5px; }
+
+        .toast { visibility: hidden; min-width: 250px; background-color: var(--accent); color: #000; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 1001; bottom: 30px; right: 30px; font-weight: bold; opacity: 0; transition: opacity 0.3s; }
+        .toast.show { visibility: visible; opacity: 1; }
+        
+        /* Items Modal CSS */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 95%; max-width: 600px; border: 1px solid var(--border); max-height: 80vh; overflow-y: auto; }
+        .items-table { width: 100%; margin-top: 15px; }
+        .items-table th, .items-table td { padding: 10px; border-bottom: 1px solid #444; text-align: left; }
+        .close-btn { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; float: right; }
+        .pack-btn { width: 100%; padding: 15px; background: var(--accent); color: #000; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; display: none; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2>Admin Dashboard</h2>
+        <a href="/">Exit Admin</a>
+    </nav>
+
+    {% if not authenticated %}
+    <div class="login-box">
+        <h2 style="color:var(--accent);">Secure Access</h2>
+        {% if error %}<p style="color:#ef4444; margin-top:10px;">{{ error }}</p>{% endif %}
+        <form method="POST">
+            <input type="password" name="password" placeholder="Enter Admin Password" required>
+            <button type="submit">Unlock Dashboard</button>
+        </form>
+    </div>
+    {% else %}
+    <div class="container">
+        <h2>Live Orders</h2>
+        <div style="overflow-x:auto;">
+            <table>
+                <tr>
+                    <th>ID & Date</th>
+                    <th>Customer Info</th>
+                    <th>Database Items</th>
+                    <th>Amount</th>
+                    <th>Status & Action</th>
+                </tr>
+                {% for order in orders %}
+                <tr>
+                    <td><strong>{{ order['Order_ID'] }}</strong><br><small style="color:var(--text-muted)">{{ order['Date'] }}</small></td>
+                    <td>{{ order['Username'] }}<br><small style="color:var(--accent)">📞 {{ order['Customer_Phone'] }}</small><br><small>{{ order['Delivery_Address'] }}, {{ order['Pincode'] }}</small></td>
+                    <td>
+                        <button onclick="viewItems('{{ order['Order_ID'] }}', '{{ order['Items_Ordered'] }}')" style="background:var(--bg-main); border:1px solid var(--accent); color:white; padding:5px 10px; border-radius:4px; cursor:pointer;">View Items to Pack</button>
+                    </td>
+                    <td style="font-weight:bold; font-size:1.1rem;">₹{{ order['Total_Amount'] }}</td>
+                    <td>
+                        <select onchange="updateStatus('{{ order['Order_ID'] }}', this.value)">
+                            <option value="Received" {% if order['Order_Status'] == 'Received' %}selected{% endif %}>Received</option>
+                            <option value="Prepared" {% if order['Order_Status'] == 'Prepared' %}selected{% endif %}>Prepared (Packed)</option>
+                            <option value="Shipping" {% if order['Order_Status'] == 'Shipping' %}selected{% endif %}>Shipping</option>
+                            <option value="Delivered" {% if order['Order_Status'] == 'Delivered' %}selected{% endif %}>Delivered</option>
+                        </select>
+                        <br>
+                        <a href="#" onclick="notifyCustomer('{{ order['Customer_Phone'] }}', '{{ order['Order_ID'] }}', '{{ order['Order_Status'] }}')" class="wa-btn">📲 Notify Status</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Items Packing Modal -->
+    <div id="items-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="document.getElementById('items-modal').style.display='none'">✕</button>
+            <h3 style="color:var(--accent); margin-bottom:10px;">Order <span id="modal-order-id"></span> Items</h3>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Check all items as you pack them.</p>
+            
+            <table class="items-table">
+                <thead><tr><th>Pack</th><th>Qty</th><th>Product Name</th><th>Weight</th></tr></thead>
+                <tbody id="modal-items-body"></tbody>
+            </table>
+            
+            <button id="mark-packed-btn" class="pack-btn" onclick="markAsPacked()">All Items Packed: Mark Status as Prepared</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let currentModalOrderId = "";
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = 'toast show';
+            setTimeout(() => { t.className = t.className.replace('show', ''); }, 3000);
+        }
+
+        function updateStatus(orderId, newStatus) {
+            fetch('/api/update_order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderId, status: newStatus })
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') {
+                    showToast(`Order ${orderId} updated to ${newStatus}`);
+                    setTimeout(() => window.location.reload(), 1000); // Reload to reflect changes
+                }
+                else showToast("Update failed");
+            });
+        }
+
+        // Parse items string from sheets and create interactive table
+        function viewItems(orderId, itemsStr) {
+            currentModalOrderId = orderId;
+            document.getElementById('modal-order-id').innerText = orderId;
+            const tbody = document.getElementById('modal-items-body');
+            tbody.innerHTML = '';
+            
+            // Format: "2x Apple (1kg) | 1x Banana (500g)"
+            const items = itemsStr.split('|');
+            
+            items.forEach((item, index) => {
+                item = item.trim();
+                if(!item) return;
+                
+                // Extract Qty, Name, Weight using simple string manipulation
+                let qty = item.split('x')[0].trim();
+                let rest = item.substring(item.indexOf('x') + 1).trim();
+                let name = rest.split('(')[0].trim();
+                let weight = rest.match(/\(([^)]+)\)/) ? rest.match(/\(([^)]+)\)/)[1] : '-';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><input type="checkbox" class="pack-checkbox" onchange="checkAllPacked()"></td>
+                        <td style="font-weight:bold;">${qty}</td>
+                        <td>${name}</td>
+                        <td style="color:var(--text-muted)">${weight}</td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById('mark-packed-btn').style.display = 'none';
+            document.getElementById('items-modal').style.display = 'flex';
+        }
+
+        function checkAllPacked() {
+            const checkboxes = document.querySelectorAll('.pack-checkbox');
+            const allChecked = Array.from(checkboxes).every(c => c.checked);
+            document.getElementById('mark-packed-btn').style.display = allChecked ? 'block' : 'none';
+        }
+
+        function markAsPacked() {
+            updateStatus(currentModalOrderId, 'Prepared');
+            document.getElementById('items-modal').style.display = 'none';
+        }
+
+        function notifyCustomer(phone, orderId, status) {
+            let msg = `👋 Hello from *Santhosh Sai Krishna & Co!* 🌟\n\n`;
+            
+            if(status === 'Received' || status === 'Pending') {
+                msg += `We've successfully received your order 🛍️ *${orderId}*.\nOur team is currently processing your items ⏳.\n\nThank you for choosing us! 🙏✨`;
+            }
+            else if(status === 'Prepared') {
+                msg += `Great news! 🥳 Your order 📦 *${orderId}* has been securely packed and is ready for dispatch.\n\nGet ready for premium freshness! 🍃✨`;
+            }
+            else if(status === 'Shipping') {
+                msg += `Woohoo! 🚀 Your order 🛵 *${orderId}* is out for delivery and heading your way right now.\n\nPlease keep your phone handy! 📱🚚`;
+            }
+            else if(status === 'Delivered') {
+                msg += `Success! 🎉 Your order ✅ *${orderId}* has been delivered successfully.\n\nWe hope you love our products! 💖 See you next time! 🛒✨`;
+            }
+            
+            // Open WhatsApp with properly encoded stylish text
+            window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+    </script>
+</body>
+</html>

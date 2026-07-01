@@ -1,0 +1,49 @@
+:root {
+    --primary: #2e7d32; /* Rich Green */
+    --secondary: #ff9800; /* Vibrant Orange */
+    --bg: #f9fafb;
+    --text: #333;
+    --card-bg: #fff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background-color: var(--bg); color: var(--text); }
+
+/* Navigation */
+.announcement { background: var(--secondary); color: white; text-align: center; padding: 8px; font-weight: bold; font-size: 14px; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: var(--primary); color: white; position: sticky; top: 0; z-index: 100; }
+nav h2 { font-size: 24px; cursor: pointer; }
+nav a { color: white; text-decoration: none; margin-left: 20px; font-weight: bold; }
+.cart-btn { background: white; color: var(--primary); border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+/* Carousel */
+.carousel { width: 100%; height: 300px; background: #ddd; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+.carousel img { min-width: 100%; height: 100%; object-fit: cover; scroll-snap-align: center; }
+
+/* Store Layout */
+.container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+.category-section { margin-bottom: 40px; }
+.category-title { border-bottom: 2px solid var(--primary); padding-bottom: 5px; margin-bottom: 20px; color: var(--primary); }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+
+/* Product Card */
+.card { background: var(--card-bg); border-radius: 8px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; transition: 0.3s; border: 1px solid #eee; }
+.card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+.card img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 15px; border-radius: 5px; }
+.card h3 { font-size: 16px; margin-bottom: 5px; height: 40px; overflow: hidden; }
+.price { color: var(--primary); font-size: 20px; font-weight: bold; margin: 10px 0; }
+.weight-select { width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+.add-btn { width: 100%; background: var(--secondary); color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.add-btn:hover { background: #e68a00; }
+
+/* Forms & Tables */
+.form-box { background: white; padding: 30px; border-radius: 8px; max-width: 500px; margin: 40px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.form-box input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+.form-box button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+th { background-color: var(--primary); color: white; }
+.status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+.wa-btn { background: #25D366; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; text-decoration: none;}
+
+footer { background: #333; color: white; text-align: center; padding: 20px; margin-top: 40px; }

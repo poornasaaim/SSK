@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/grocery-store.jpg') }}">
+    <title>Bag - SSK & Co</title>
+    <style>
+        :root {
+            --bg-main: #121212; --bg-card: #1e1e1e;
+            --text-main: #f3f4f6; --text-muted: #9ca3af;
+            --accent: #10b981; --border: #333;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); }
+        
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+        nav h2 { color: var(--accent); cursor: pointer; }
+        nav a { color: var(--text-main); text-decoration: none; font-weight: bold; border: 1px solid var(--border); padding: 8px 15px; border-radius: 5px; }
+
+        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .step-box { background: var(--bg-card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; display: none; animation: fadeIn 0.4s ease; }
+        .step-box.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding: 15px 0; }
+        .cart-info h4 { margin-bottom: 5px; color: var(--accent); }
+        .cart-info p { color: var(--text-muted); font-size: 0.9rem; }
+        
+        .qty-controls { display: flex; align-items: center; gap: 10px; background: var(--bg-main); padding: 5px; border-radius: 6px; border: 1px solid var(--border); }
+        .qty-btn { background: transparent; color: white; border: none; width: 25px; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
+        .qty-btn:hover { color: var(--accent); }
+        .del-btn { color: #ef4444; background: transparent; border: none; cursor: pointer; font-weight: bold; font-size: 1.2rem; margin-left: 15px; }
+
+        label { display: block; margin: 15px 0 5px; color: var(--text-muted); }
+        input, textarea { width: 100%; padding: 12px; background: var(--bg-main); color: white; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 15px;}
+        
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--text-muted); }
+        .total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+        
+        .btn-primary { width: 100%; background: var(--accent); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 20px; cursor: pointer; transition: 0.3s; }
+        .btn-wa { background: #25D366; color: #000; }
+        
+        .qr-placeholder { width: 200px; height: 200px; margin: 20px auto; display: block; border: 2px solid var(--accent); border-radius: 10px; padding: 10px; background: white; }
+
+        .toast { visibility: hidden; min-width: 250px; background-color: var(--accent); color: #000; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 1001; bottom: 30px; left: 50%; transform: translateX(-50%); font-weight: bold; opacity: 0; transition: opacity 0.3s; }
+        .toast.show { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2 onclick="window.location.href='/'">SSK & Co</h2>
+        <a href="/shop">Back to Shop</a>
+    </nav>
+
+    <div class="container">
+        
+        <!-- STEP 1: Products Only -->
+        <div id="step-1" class="step-box active">
+            <h2 style="border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">Step 1: Review Items</h2>
+            <div id="cart-items-container"></div>
+            <div class="total-row" style="margin-bottom: 20px;"><span>Cart Subtotal</span><span>₹<span id="sub-total">0</span></span></div>
+            <button class="btn-primary" onclick="goToStep(2)">Proceed to Booking Details</button>
+        </div>
+
+        <!-- STEP 2: Address & Coupons -->
+        <div id="step-2" class="step-box">
+            <h2 style="border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">Step 2: Delivery & Offers</h2>
+            <label>Full Delivery Address</label>
+            <textarea id="address" rows="3" placeholder="Door No, Street Name, Landmark..."></textarea>
+            
+            <div style="display: flex; gap: 15px;">
+                <div style="flex:1;">
+                    <label>Pincode</label>
+                    <input type="text" id="pincode" placeholder="e.g. 600001" oninput="resetProceedButton()">
+                </div>
+                <div style="flex:1;">
+                    <label>Discount Coupon Code (Optional)</label>
+                    <input type="text" id="coupon" placeholder="e.g. WELCOME10" oninput="resetProceedButton()">
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="validateAndCalculate()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border);">Apply Coupon & Calculate Pincode Fee</button>
+            
+            <div style="margin: 20px 0; background: var(--bg-main); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+                <div class="summary-row"><span>Items Total</span><span>₹<span id="calc-sub">0</span></span></div>
+                <div class="summary-row"><span>Delivery Fee</span><span>₹<span id="calc-shipping">0</span></span></div>
+                <div class="summary-row" style="color:var(--accent);"><span>Discount Applied</span><span>-₹<span id="calc-discount">0</span></span></div>
+                <div class="total-row"><span>Final Payable</span><span>₹<span id="grand-total">0</span></span></div>
+            </div>
+            
+            <button class="btn-primary" onclick="goToStep(1)" style="background:transparent; border:1px solid var(--border); color:white; width:48%;">Back</button>
+            <button id="proceed-btn" class="btn-primary" onclick="goToStep(3)" style="width:48%; float:right; opacity: 0.5; cursor: not-allowed;" disabled>Proceed to Secure Payment</button>
+        </div>
+
+        <!-- STEP 3: Payment & Confirm -->
+        <div id="step-3" class="step-box" style="text-align: center;">
+            <h2 style="color:var(--accent);">Step 3: Pay & Confirm</h2>
+            <p style="margin: 15px 0;">Please scan the QR code below and pay <b>₹<span id="final-pay-display">0</span></b> using any UPI App.</p>
+            
+            <img src="{{ settings['UPI_QR_Image_URL'] }}" class="qr-placeholder" alt="UPI QR Code">
+            
+            <p style="color:var(--text-muted); font-size:0.9rem; margin: 20px 0;">Once paid, click the button below. It will open WhatsApp with your Order details so you can send us the screenshot.</p>
+            
+            <button class="btn-primary btn-wa" onclick="placeOrder()">Confirm Order & Send Proof to WhatsApp</button>
+            <button class="btn-primary" onclick="goToStep(2)" style="background:transparent; border:1px solid var(--border); color:white; margin-top:10px;">Go Back</button>
+        </div>
+
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let cart = JSON.parse(localStorage.getItem('sskc_cart')) || [];
+        const shopWhatsApp = "{{ settings['WhatsApp_Number'] }}";
+        let currentUser = null;
+
+        window.onload = () => {
+            currentUser = JSON.parse(localStorage.getItem('sskc_user'));
+            if(!currentUser) { 
+                alert("Please login first!");
+                window.location.href = '/'; 
+                return; 
+            }
+            document.getElementById('address').value = currentUser.Default_Address || '';
+            document.getElementById('pincode').value = currentUser.Default_Pincode || '';
+            renderCart();
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = 'toast show';
+            setTimeout(() => { t.className = t.className.replace('show', ''); }, 3000);
+        }
+
+        function goToStep(step) {
+            if(step === 2 && cart.length === 0) return showToast("Your bag is empty!");
+            if(step === 3) {
+                if(!document.getElementById('address').value || !document.getElementById('pincode').value) {
+                    return showToast("Please fill address and pincode");
+                }
+            }
+            document.querySelectorAll('.step-box').forEach(el => el.classList.remove('active'));
+            document.getElementById('step-' + step).classList.add('active');
+            
+            if(step === 2) {
+                resetProceedButton();
+            }
+        }
+        
+        function resetProceedButton() {
+            const btn = document.getElementById('proceed-btn');
+            if(btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-container');
+            if(cart.length === 0) {
+                container.innerHTML = "<p style='color:var(--text-muted); margin:20px 0;'>Your bag is empty.</p>";
+                document.getElementById('sub-total').innerText = "0";
+                return;
+            }
+
+            let html = "";
+            let subtotal = 0;
+
+            cart.forEach((item, index) => {
+                subtotal += item.totalAmt;
+                let unitPrice = item.totalAmt / item.qty; 
+                
+                html += `
+                <div class="cart-item">
+                    <div class="cart-info">
+                        <h4>${item.name}</h4>
+                        <p>${item.weight} | ₹${unitPrice.toFixed(0)} per unit</p>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <div class="qty-controls">
+                            <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
+                            <span style="width:20px; text-align:center;">${item.qty}</span>
+                            <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
+                        </div>
+                        <span style="margin-left:15px; font-weight:bold; color:var(--accent); min-width:50px; text-align:right;">₹${item.totalAmt}</span>
+                        <button class="del-btn" onclick="removeItem(${index})">✕</button>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+            document.getElementById('sub-total').innerText = subtotal;
+        }
+
+        function changeQty(index, change) {
+            let item = cart[index];
+            let unitPrice = item.totalAmt / item.qty;
+            let newQty = item.qty + change;
+            if(newQty < 1) return; 
+            
+            item.qty = newQty;
+            item.totalAmt = unitPrice * newQty;
+            localStorage.setItem('sskc_cart', JSON.stringify(cart));
+            renderCart();
+        }
+
+        function removeItem(index) {
+            cart.splice(index, 1);
+            localStorage.setItem('sskc_cart', JSON.stringify(cart));
+            renderCart();
+        }
+
+        function validateAndCalculate() {
+            const subtotal = parseInt(document.getElementById('sub-total').innerText);
+            const pincode = document.getElementById('pincode').value.trim();
+            const coupon = document.getElementById('coupon').value.trim();
+            
+            // Check for valid 6-digit Indian Pincode format
+            const pinRegex = /^[0-9]{6}$/;
+            if(!pincode || !pinRegex.test(pincode)) {
+                return showToast("Please enter a valid 6-digit Pincode.");
+            }
+
+            // Fetch from backend (checks Google Sheets Tab 4)
+            fetch('/api/validate_checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    pincode: pincode, 
+                    discount: coupon, 
+                    phone: currentUser.Phone_Number, 
+                    subtotal: subtotal 
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const shipping = data.shipping || 0;
+                const discountPercent = data.discount_percent || 0;
+                
+                let discountAmt = Math.round((subtotal * discountPercent) / 100);
+                let finalTotal = subtotal + shipping - discountAmt;
+
+                document.getElementById('calc-sub').innerText = subtotal;
+                document.getElementById('calc-shipping').innerText = shipping;
+                document.getElementById('calc-discount').innerText = discountAmt;
+                document.getElementById('grand-total').innerText = finalTotal;
+                document.getElementById('final-pay-display').innerText = finalTotal; // Update step 3
+                
+                // Unlock the Proceed button!
+                const btn = document.getElementById('proceed-btn');
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+                
+                if(coupon && discountPercent > 0) showToast(`Coupon Applied! ${discountPercent}% Off`);
+                else if(coupon) showToast("Invalid or Expired Coupon");
+                else showToast("Shipping calculated successfully!");
+            });
+        }
+
+        function placeOrder() {
+            if(cart.length === 0) return showToast("Bag is empty!");
+            
+            const address = document.getElementById('address').value;
+            const pincode = document.getElementById('pincode').value;
+            const total = document.getElementById('grand-total').innerText;
+            // Use standard format separated by '|' for easy admin reading
+            const itemsString = cart.map(i => `${i.qty}x ${i.name} (${i.weight})`).join(" | ");
+
+            fetch('/api/place_order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    username: currentUser.Username, 
+                    phone: currentUser.Phone_Number, 
+                    address: address, 
+                    pincode: pincode, 
+                    total: total, 
+                    items: itemsString 
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    localStorage.removeItem('sskc_cart'); // clear cart
+                    
+                    // FIXED WHATSAPP MESSAGE ENCODING
+                    let msg = `Hello SSK & Co!\n\nI have placed an order.\n*Order ID:* ${data.order_id}\n*Total Paid:* ₹${total}\n*Name:* ${currentUser.Full_Name}\n*Address:* ${address}, ${pincode}\n\n_Please find my payment screenshot attached._`;
+                    
+                    // encodeURIComponent ensures all spaces and newlines work on all phones
+                    window.location.href = `https://wa.me/91${shopWhatsApp}?text=${encodeURIComponent(msg)}`;
+                } else {
+                    showToast("Error placing order. Try again.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

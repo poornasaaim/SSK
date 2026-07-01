@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santhosh Sai Krishna & Co</title>
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/grocery-store.jpg') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #121212; --bg-card: #1e1e1e;
+            --text-main: #f3f4f6; --text-muted: #9ca3af;
+            --accent: #10b981; --accent-hover: #059669; --border: #333;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); }
+        
+        /* Navigation & Announcement */
+        .announcement-container { background: var(--accent); color: #000; padding: 10px 0; overflow: hidden; white-space: nowrap; position: relative; }
+        .announcement-text { display: inline-block; padding-left: 100%; animation: marquee 15s linear infinite; font-weight: bold; font-size: 1.1rem; }
+        @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+        
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        nav h2 { color: var(--accent); cursor: pointer; }
+        .nav-btns button { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.3s; }
+        .nav-btns button:hover { background: var(--accent-hover); color: white; }
+
+        /* Carousel */
+        .carousel { display: flex; overflow-x: hidden; scroll-behavior: smooth; height: 350px; background: #000; position: relative; }
+        .carousel img { min-width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+        
+        /* Intro & Sections */
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; text-align: center; }
+        .intro-text { font-size: 1.2rem; color: var(--text-muted); margin-bottom: 40px; line-height: 1.6; }
+        
+        .quote-section { padding: 40px 20px; background: linear-gradient(135deg, var(--bg-card), #111); border-radius: 12px; margin: 40px 0; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .quote-text { font-size: 1.5rem; font-style: italic; color: var(--accent); }
+
+        /* Auth Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid var(--border); }
+        .modal-content h3 { margin-bottom: 20px; color: var(--accent); }
+        .modal-content input { width: 100%; padding: 12px; margin-bottom: 15px; background: var(--bg-main); border: 1px solid var(--border); color: white; border-radius: 6px; }
+        .modal-content button { width: 100%; padding: 12px; background: var(--accent); color: #000; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; }
+        .toggle-text { color: var(--text-muted); cursor: pointer; text-decoration: underline; font-size: 0.9rem; }
+
+        /* Toast Alert */
+        .toast { visibility: hidden; min-width: 250px; background-color: var(--accent); color: #000; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 1001; bottom: 30px; right: 30px; font-weight: bold; opacity: 0; transition: opacity 0.3s, visibility 0.3s; }
+        .toast.show { visibility: visible; opacity: 1; }
+        .toast.error { background-color: #ef4444; color: white; }
+
+        footer { background: var(--bg-card); text-align: center; padding: 40px 20px; margin-top: 50px; border-top: 1px solid var(--border); }
+        .social-icons { margin: 20px 0; display: flex; justify-content: center; gap: 20px; }
+        .social-icons a { color: var(--text-main); font-size: 1.8rem; transition: 0.3s; text-decoration: none; }
+        .social-icons a:hover { color: var(--accent); transform: translateY(-3px); }
+        
+        iframe { width: 100%; max-width: 800px; height: 300px; border-radius: 12px; border: none; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="announcement-container">
+        <div class="announcement-text">{{ settings['Announcement_Bar'] }} | Use code WELCOME10 for 10% Off your first order!</div>
+    </div>
+
+    <nav>
+        <h2>SSK & Co</h2>
+        <div class="nav-btns">
+            <button id="auth-btn" onclick="openAuth()">Login / Register</button>
+            <button id="logout-btn" onclick="logout()" style="display:none; background:transparent; border:1px solid var(--accent); color:var(--accent);">Logout</button>
+        </div>
+    </nav>
+
+    <div class="carousel" id="main-carousel">
+        <img src="{{ settings['Carousel_Image_1'] }}" alt="Offer 1">
+        <img src="{{ settings['Carousel_Image_2'] }}" alt="Offer 2">
+        <img src="{{ settings['Carousel_Image_3'] }}" alt="Welcome">
+    </div>
+
+    <div class="container">
+        <br><br><br>
+        <h1 style="margin-bottom: 15px;">Welcome to Santhosh Sai Krishna & Co</h1>
+        <br>
+        <p class="intro-text">Your trusted local market in Chennai. We deliver the freshest spices, dry fruits, and everyday essentials directly to your doorstep. Experience premium quality at unbeatable prices.</p>
+        <br>
+        <div class="quote-section">
+            <p class="quote-text">"Purity in every grain, freshness in every bite. Serving families with trust since day one."</p>
+        </div>
+        <br><br>
+        <h2 style="color: var(--accent); margin-bottom: 20px;">Current Offers</h2>
+        <div style="display:flex; justify-content:center; gap: 20px; flex-wrap: wrap;">
+            <div style="background:var(--bg-card); padding:20px; border-radius:8px; border:1px dashed var(--accent);">Use code <b>WELCOME10</b> for 10% Off!</div>
+            <div style="background:var(--bg-card); padding:20px; border-radius:8px; border:1px dashed var(--accent);">Free Shipping in George Town (600001)</div>
+        </div>
+        <br><br><br>
+        <!-- NEW BULK ORDER SECTION -->
+        <div style="margin-top: 50px; background: linear-gradient(135deg, var(--bg-card), #111); padding: 40px 20px; border-radius: 12px; border: 1px solid var(--accent); text-align: center; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.1);">
+            <h2 style="color: var(--accent); margin-bottom: 15px;">📦 Planning a Bulk Order or Event?</h2>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 20px; max-width: 600px; margin-left: auto; margin-right: auto;">We supply premium quality dry fruits, spices, and groceries for weddings, corporate events, and wholesale needs at special discounted rates.</p>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 20px;">Call us directly to discuss:</p>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                <a href="tel:9392883941" style="background: var(--accent); color: #000; padding: 12px 25px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; transition: 0.3s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">📞 +91 9392883941</a>
+                <a href="tel:9444463859" style="background: var(--accent); color: #000; padding: 12px 25px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; transition: 0.3s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">📞 +91 9444463859</a>
+            </div>
+        </div>
+    </div>
+    <br><br><br>
+    <footer>
+        <h3>Contact Us & Location</h3>
+        <p style="color: var(--text-muted); margin: 10px 0;">Santhosh Sai Krishna & Co, George Town, Chennai</p>
+        
+        <div class="social-icons">
+            <a href="https://wa.me/91{{ settings['WhatsApp_Number'] }}" target="_blank" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+            <a href="tel:+91{{ settings['WhatsApp_Number'] }}" title="Call Us"><i class="fas fa-phone"></i></a>
+            <a href="https://instagram.com" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://maps.app.goo.gl/xaURwuBsPwz7gsyx9" target="_blank" title="Location"><i class="fas fa-map-marker-alt"></i></a>
+        </div>
+
+        <iframe src="https://maps.google.com/maps?q=Santhosh+Sai+Krishna+&+Co,+George+Town,+Chennai&t=&z=15&ie=UTF8&iwloc=&output=embed" loading="lazy"></iframe>
+    </footer>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content" id="login-form">
+            <h3>Login to Your Account</h3>
+            <input type="text" id="l-user" placeholder="Username">
+            <input type="password" id="l-pass" placeholder="Password">
+            <button onclick="handleAuth('login')">Login</button>
+            <span class="toggle-text" onclick="toggleAuth()">New here? Create an account</span>
+            <button onclick="closeAuth()" style="background:transparent; border:1px solid var(--border); color:white; margin-top:10px;">Close</button>
+        </div>
+        <div class="modal-content" id="register-form" style="display:none;">
+            <h3>Create Account</h3>
+            <input type="text" id="r-user" placeholder="Username">
+            <input type="password" id="r-pass" placeholder="Password">
+            <input type="text" id="r-name" placeholder="Full Name">
+            <input type="text" id="r-phone" placeholder="Phone Number">
+            <input type="text" id="r-address" placeholder="Delivery Address">
+            <input type="text" id="r-pincode" placeholder="Pincode">
+            <button onclick="handleAuth('register')">Register</button>
+            <span class="toggle-text" onclick="toggleAuth()">Already have an account? Login</span>
+            <button onclick="closeAuth()" style="background:transparent; border:1px solid var(--border); color:white; margin-top:10px;">Close</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // Carousel Auto-Play Logic
+        let currentSlide = 0;
+        const carousel = document.getElementById('main-carousel');
+        const slides = carousel.getElementsByTagName('img');
+        
+        setInterval(() => {
+            if(slides.length > 0) {
+                currentSlide = (currentSlide + 1) % slides.length;
+                carousel.scrollTo({ left: slides[currentSlide].offsetLeft, behavior: 'smooth' });
+            }
+        }, 5000);
+
+        function showToast(msg, isError=false) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = `toast show ${isError ? 'error' : ''}`;
+            setTimeout(() => { t.className = t.className.replace('show', ''); }, 3000);
+        }
+
+        function checkLoginStatus() {
+            const user = JSON.parse(localStorage.getItem('sskc_user'));
+            const btn = document.getElementById('auth-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            if(user) {
+                btn.innerText = "Enter Shop";
+                btn.onclick = () => window.location.href = '/shop';
+                logoutBtn.style.display = 'inline-block';
+            }
+        }
+        window.onload = checkLoginStatus;
+
+        function logout() {
+            localStorage.removeItem('sskc_user');
+            window.location.reload();
+        }
+
+        function openAuth() { document.getElementById('auth-modal').style.display = 'flex'; }
+        function closeAuth() { document.getElementById('auth-modal').style.display = 'none'; }
+        function toggleAuth() {
+            const l = document.getElementById('login-form');
+            const r = document.getElementById('register-form');
+            if(l.style.display === 'none') { l.style.display = 'block'; r.style.display = 'none'; }
+            else { l.style.display = 'none'; r.style.display = 'block'; }
+        }
+
+        function handleAuth(action) {
+            const prefix = action === 'login' ? 'l-' : 'r-';
+            const payload = { action, username: document.getElementById(prefix+'user').value, password: document.getElementById(prefix+'pass').value };
+            
+            if(action === 'register') {
+                payload.name = document.getElementById('r-name').value;
+                payload.phone = document.getElementById('r-phone').value;
+                payload.address = document.getElementById('r-address').value;
+                payload.pincode = document.getElementById('r-pincode').value;
+                if(!payload.username || !payload.password || !payload.name) return showToast("Please fill required fields", true);
+            }
+
+            fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') {
+                    if(action === 'login') {
+                        localStorage.setItem('sskc_user', JSON.stringify(data.user));
+                        showToast("Login Successful!");
+                        setTimeout(() => window.location.href = '/shop', 1000);
+                    } else {
+                        showToast("Registration successful! Please login.");
+                        toggleAuth();
+                    }
+                } else {
+                    showToast(data.message, true);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
